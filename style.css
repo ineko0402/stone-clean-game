@@ -1,0 +1,44 @@
+body {
+  margin: 0;
+  background: #222;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+}
+.container {
+  position: relative;
+}
+canvas {
+  border: 2px solid #fff;
+}
+.ui {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  color: white;
+  font-size: 18px;
+  background: rgba(0, 0, 0, 0.5);
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+
+#progressBar {
+  height: 10px;
+  background: lime;
+  width: 0%;
+  transition: width 0.1s;
+}
+.game {
+  width: 420px;
+  margin: auto;
+  text-align: center;
+}
+canvas {
+  display: block;
+}
+.clear {
+  position: absolute;
+  font-size: 40px;
+  color: gold;
+}
