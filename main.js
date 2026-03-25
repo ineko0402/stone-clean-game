@@ -6,26 +6,20 @@ class Game {
         this.renderer = new Renderer('baseCanvas', 'dirtCanvas');
         this.input = new InputHandler(this.renderer.dirtCanvas);
         
-        // ゲーム状態の管理
         this.state = {
             gemHp: 100,
             dust: 0,
-            isGameOver: false,
-            score: 0
+            isGameOver: false
         };
         
-        this.mode = 'hammer'; // 'hammer' または 'brush'
-        this.lastTimestamp = 0;
-
+        this.mode = 'hammer';
         this.init();
     }
 
     init() {
-        // レイヤーと入力の初期化
         this.renderer.initLayers();
         this.input.init();
 
-        // 入力イベントのリスナー登録
         this.input.onStroke = (pos, isFirst, lastPos) => {
             if (this.state.isGameOver) return;
 
@@ -39,61 +33,63 @@ class Game {
         };
 
         this.setupUI();
-        
-        // ゲームループ開始
         requestAnimationFrame((ts) => this.gameLoop(ts));
     }
 
-    // 毎フレーム実行されるループ（パーティクル描画用）
     gameLoop(timestamp) {
         if (!this.state.isGameOver) {
-            // 1. パーティクルの更新と描画
             this.renderer.updateAndDrawParticles();
-            
-            // 2. ステータス表示の更新（頻度を抑える場合は調整）
             this.updateStatsUI();
         }
-
         requestAnimationFrame((ts) => this.gameLoop(ts));
     }
 
     executeHammer(pos) {
-        // 1. 泥を削る
-        this.renderer.erase(pos.x, pos.y, 6);
+        // --- メリット: 広範囲消去 ---
+        // ブラシの約5倍の半径（12px）で一気に泥を消し去る
+        const hammerRadius = 12;
+        this.renderer.erase(pos.x, pos.y, hammerRadius);
         
-        // 2. パーティクル生成（叩いた瞬間の飛び散り）
+        // 破片パーティクルも多めに生成
         this.renderer.createHammerParticles(pos.x, pos.y);
 
-        // 3. 宝石ダメージ判定
-        if (this.renderer.checkHitGem(pos.x, pos.y)) {
-            this.state.gemHp -= 15; // ダメージ量
-            // TODO: ここで画面シェイクなどの演出を呼び出す
+        // --- デメリット: 精密性の欠如 ---
+        // 叩いた中心点だけでなく、消去範囲内に宝石があるかチェック
+        // 範囲が広いため、宝石の「縁」を叩いてもダメージ判定になりやすくなります
+        if (this.checkGemInRange(pos.x, pos.y, hammerRadius)) {
+            this.state.gemHp -= 15;
+            // 画面が揺れるクラス付与（style.cssに.shakeがある場合）
+            const container = document.querySelector('.canvas-container');
+            container.classList.add('shake');
+            setTimeout(() => container.classList.remove('shake'), 100);
         }
 
-        // 4. 環境変化（粉塵の増加）
-        this.state.dust += 10;
+        this.state.dust += 15;
         this.renderer.updateDustEffect(this.state.dust);
-
         this.checkGameOver();
     }
 
+    // 指定範囲内に宝石があるか簡易チェック
+    checkGemInRange(x, y, radius) {
+        // 中点、上下左右の5点で簡易的に宝石ヒットを判定
+        const points = [
+            {x: x, y: y},
+            {x: x - radius/2, y: y},
+            {x: x + radius/2, y: y},
+            {x: x, y: y - radius/2},
+            {x: x, y: y + radius/2}
+        ];
+        return points.some(p => this.renderer.checkHitGem(p.x, p.y));
+    }
+
     executeBrush(pos, lastPos) {
-        // 1. 泥を削る（線状）
+        // ブラシは精密（半径2.5）
         this.renderer.erase(pos.x, pos.y, 2.5, true, lastPos?.x, lastPos?.y);
-        
-        // 2. 環境変化（ブラシは少しずつ汚れる）
-        this.state.dust += 0.1;
+        this.state.dust += 0.2;
         this.renderer.updateDustEffect(this.state.dust);
     }
 
-    checkGameOver() {
-        if (this.state.gemHp <= 0) {
-            this.state.gemHp = 0;
-            this.state.isGameOver = true;
-            setTimeout(() => alert("宝石が壊れてしまいました..."), 100);
-        }
-    }
-
+    // (以下、updateStatsUI, checkGameOver, setupUI, updateButtonUI は前回同様)
     updateStatsUI() {
         const statusEl = document.getElementById('status');
         if (statusEl) {
@@ -101,36 +97,34 @@ class Game {
         }
     }
 
+    checkGameOver() {
+        if (this.state.gemHp <= 0) {
+            this.state.gemHp = 0;
+            this.state.isGameOver = true;
+            setTimeout(() => alert("宝石が砕けてしまいました..."), 100);
+        }
+    }
+
     setupUI() {
         const btnHammer = document.getElementById('btnHammer');
         const btnBrush = document.getElementById('btnBrush');
-
-        // モード切替
         btnHammer.onclick = () => { this.mode = 'hammer'; this.updateButtonUI(); };
         btnBrush.onclick = () => { this.mode = 'brush'; this.updateButtonUI(); };
         
-        // 掃除アクション（水をまく）の追加
         const clearBtn = document.createElement('button');
         clearBtn.innerText = "水をまく";
-        clearBtn.style.marginLeft = "10px";
         clearBtn.onclick = () => {
             this.state.dust = 0;
             this.renderer.updateDustEffect(0);
         };
         document.querySelector('.controls').appendChild(clearBtn);
-
         this.updateButtonUI();
     }
 
     updateButtonUI() {
-        const btnHammer = document.getElementById('btnHammer');
-        const btnBrush = document.getElementById('btnBrush');
-        if (btnHammer && btnBrush) {
-            btnHammer.classList.toggle('active', this.mode === 'hammer');
-            btnBrush.classList.toggle('active', this.mode === 'brush');
-        }
+        document.getElementById('btnHammer').classList.toggle('active', this.mode === 'hammer');
+        document.getElementById('btnBrush').classList.toggle('active', this.mode === 'brush');
     }
 }
 
-// ゲームインスタンスの生成
 new Game();
