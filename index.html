@@ -1,19 +1,23 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="ja">
-  <head>
-    <meta charset="UTF-8" />
-    <title>掃除ゲーム 完全版</title>
-    <link rel="stylesheet" href="style.css" />
-  </head>
-  <body>
-    <div class="game">
-      <div class="hud">
-        <div id="progressBar"></div>
-        <div id="progressText">0%</div>
-      </div>
-      <canvas id="viewCanvas"></canvas>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Stone Clean Game</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="status">モード: ハンマー</div>
+    <div class="canvas-container">
+        <canvas id="baseCanvas" width="64" height="64"></canvas>
+        <canvas id="dirtCanvas" width="64" height="64"></canvas>
     </div>
 
-    <script type="module" src="src/main.js"></script>
-  </body>
+    <div class="controls">
+        <button id="btnHammer" class="active">ハンマー</button>
+        <button id="btnBrush">ブラシ</button>
+    </div>
+
+    <script type="module" src="main.js"></script>
+</body>
 </html>
