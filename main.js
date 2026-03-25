@@ -5,119 +5,124 @@ class Game {
     constructor() {
         this.renderer = new Renderer('baseCanvas', 'dirtCanvas');
         this.input = new InputHandler(this.renderer.dirtCanvas);
-        
-        this.state = {
-            gemHp: 100,
-            dust: 0,
-            isGameOver: false
-        };
-        
-        this.mode = 'hammer';
         this.init();
     }
 
     init() {
+        this.state = {
+            gemHp: 100,
+            dust: 0,
+            isGameOver: false,
+            isCleared: false,
+            cleanPercent: 0
+        };
+        this.mode = 'hammer';
+        
         this.renderer.initLayers();
         this.input.init();
 
         this.input.onStroke = (pos, isFirst, lastPos) => {
-            if (this.state.isGameOver) return;
+            if (this.state.isGameOver || this.state.isCleared) return;
 
             if (this.mode === 'hammer') {
-                if (isFirst) {
-                    this.executeHammer(pos);
-                }
+                if (isFirst) this.executeHammer(pos);
             } else {
                 this.executeBrush(pos, lastPos);
             }
         };
 
         this.setupUI();
+        // 判定用タイマー（1秒間に2回チェック）
+        this.checkTimer = setInterval(() => this.calculateProgress(), 500);
+        
         requestAnimationFrame((ts) => this.gameLoop(ts));
     }
 
-    gameLoop(timestamp) {
-        if (!this.state.isGameOver) {
-            this.renderer.updateAndDrawParticles();
-            this.updateStatsUI();
+    // 宝石の上の泥がどれくらい消えたか計算
+    calculateProgress() {
+        if (this.state.isGameOver || this.state.isCleared) return;
+
+        // 宝石の範囲（24,24 から 16x16）のピクセルデータを取得
+        const imgData = this.renderer.dirtCtx.getImageData(24, 24, 16, 16).data;
+        let clearPixels = 0;
+        const totalPixels = 16 * 16;
+
+        for (let i = 3; i < imgData.length; i += 4) {
+            if (imgData[i] === 0) clearPixels++; // アルファ値が0なら消去済み
         }
-        requestAnimationFrame((ts) => this.gameLoop(ts));
+
+        this.state.cleanPercent = (clearPixels / totalPixels) * 100;
+
+        // 95%以上綺麗になったらクリア
+        if (this.state.cleanPercent >= 95) {
+            this.state.isCleared = true;
+            this.showResult("発掘成功！宝石を見つけました！");
+        }
     }
 
     executeHammer(pos) {
-        // --- メリット: 広範囲消去 ---
-        // ブラシの約5倍の半径（12px）で一気に泥を消し去る
         const hammerRadius = 12;
         this.renderer.erase(pos.x, pos.y, hammerRadius);
-        
-        // 破片パーティクルも多めに生成
         this.renderer.createHammerParticles(pos.x, pos.y);
 
-        // --- デメリット: 精密性の欠如 ---
-        // 叩いた中心点だけでなく、消去範囲内に宝石があるかチェック
-        // 範囲が広いため、宝石の「縁」を叩いてもダメージ判定になりやすくなります
         if (this.checkGemInRange(pos.x, pos.y, hammerRadius)) {
-            this.state.gemHp -= 15;
-            // 画面が揺れるクラス付与（style.cssに.shakeがある場合）
-            const container = document.querySelector('.canvas-container');
-            container.classList.add('shake');
-            setTimeout(() => container.classList.remove('shake'), 100);
+            this.state.gemHp -= 20;
+            document.querySelector('.canvas-container').classList.add('shake');
+            setTimeout(() => document.querySelector('.canvas-container').classList.remove('shake'), 100);
         }
 
-        this.state.dust += 15;
+        this.state.dust += 10;
         this.renderer.updateDustEffect(this.state.dust);
         this.checkGameOver();
     }
 
-    // 指定範囲内に宝石があるか簡易チェック
-    checkGemInRange(x, y, radius) {
-        // 中点、上下左右の5点で簡易的に宝石ヒットを判定
-        const points = [
-            {x: x, y: y},
-            {x: x - radius/2, y: y},
-            {x: x + radius/2, y: y},
-            {x: x, y: y - radius/2},
-            {x: x, y: y + radius/2}
-        ];
-        return points.some(p => this.renderer.checkHitGem(p.x, p.y));
-    }
-
     executeBrush(pos, lastPos) {
-        // ブラシは精密（半径2.5）
         this.renderer.erase(pos.x, pos.y, 2.5, true, lastPos?.x, lastPos?.y);
-        this.state.dust += 0.2;
+        this.state.dust += 0.1;
         this.renderer.updateDustEffect(this.state.dust);
     }
 
-    // (以下、updateStatsUI, checkGameOver, setupUI, updateButtonUI は前回同様)
-    updateStatsUI() {
-        const statusEl = document.getElementById('status');
-        if (statusEl) {
-            statusEl.innerText = `宝石HP: ${Math.floor(this.state.gemHp)}% | 粉塵: ${Math.floor(this.state.dust)}`;
-        }
+    checkGemInRange(x, y, radius) {
+        const points = [{x, y}, {x:x-radius/2, y}, {x:x+radius/2, y}, {x, y:y-radius/2}, {x, y:y+radius/2}];
+        return points.some(p => this.renderer.checkHitGem(p.x, p.y));
     }
 
     checkGameOver() {
         if (this.state.gemHp <= 0) {
             this.state.gemHp = 0;
             this.state.isGameOver = true;
-            setTimeout(() => alert("宝石が砕けてしまいました..."), 100);
+            this.showResult("宝石が砕けてしまいました...");
+        }
+    }
+
+    showResult(message) {
+        clearInterval(this.checkTimer);
+        setTimeout(() => {
+            alert(`${message}\n残りHP: ${Math.floor(this.state.gemHp)}%`);
+            if(confirm("もう一度挑戦しますか？")) {
+                location.reload(); // リスタート（簡易実装）
+            }
+        }, 100);
+    }
+
+    gameLoop() {
+        if (!this.state.isGameOver && !this.state.isCleared) {
+            this.renderer.updateAndDrawParticles();
+            this.updateStatsUI();
+        }
+        requestAnimationFrame(() => this.gameLoop());
+    }
+
+    updateStatsUI() {
+        const statusEl = document.getElementById('status');
+        if (statusEl) {
+            statusEl.innerText = `HP: ${Math.floor(this.state.gemHp)}% | 清掃率: ${Math.floor(this.state.cleanPercent)}% | 粉塵: ${Math.floor(this.state.dust)}`;
         }
     }
 
     setupUI() {
-        const btnHammer = document.getElementById('btnHammer');
-        const btnBrush = document.getElementById('btnBrush');
-        btnHammer.onclick = () => { this.mode = 'hammer'; this.updateButtonUI(); };
-        btnBrush.onclick = () => { this.mode = 'brush'; this.updateButtonUI(); };
-        
-        const clearBtn = document.createElement('button');
-        clearBtn.innerText = "水をまく";
-        clearBtn.onclick = () => {
-            this.state.dust = 0;
-            this.renderer.updateDustEffect(0);
-        };
-        document.querySelector('.controls').appendChild(clearBtn);
+        document.getElementById('btnHammer').onclick = () => { this.mode = 'hammer'; this.updateButtonUI(); };
+        document.getElementById('btnBrush').onclick = () => { this.mode = 'brush'; this.updateButtonUI(); };
         this.updateButtonUI();
     }
 
