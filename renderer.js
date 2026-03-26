@@ -20,17 +20,20 @@ export class Renderer {
         this.particles = [];
     }
 
-    initLayers() {
+    initLayers(gem) {
         // 1. 宝石の描画（ベースレイヤー）
         this.baseCtx.fillStyle = '#00e5ff'; // 宝石の色
-        this.baseCtx.fillRect(24, 24, 16, 16);
-        this.baseCtx.fillStyle = '#ffffff'; // 輝き
-        this.baseCtx.fillRect(26, 26, 4, 4);
+        this.baseCtx.fillRect(gem.x, gem.y, gem.w, gem.h);
+        
+        // 輝き（左上の方に小さく配置）
+        this.baseCtx.fillStyle = '#ffffff';
+        const shineSize = Math.max(2, Math.floor(gem.w / 4));
+        this.baseCtx.fillRect(gem.x + 2, gem.y + 2, shineSize, shineSize);
         
         // 2. 当たり判定マップの作成（宝石と同じ位置を赤く塗る）
         this.collisionCtx.clearRect(0, 0, 64, 64);
         this.collisionCtx.fillStyle = '#ff0000';
-        this.collisionCtx.fillRect(24, 24, 16, 16);
+        this.collisionCtx.fillRect(gem.x, gem.y, gem.w, gem.h);
 
         // 3. 泥の生成
         this.drawDirt();

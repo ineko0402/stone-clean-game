@@ -9,7 +9,24 @@ class Game {
     }
 
     init() {
+        // 宝石のサイズパターン（5種類）を設定
+        const sizePatterns = [
+            { w: 12, h: 12 },
+            { w: 16, h: 16 },
+            { w: 20, h: 20 },
+            { w: 24, h: 24 },
+            { w: 16, h: 20 }
+        ];
+        const pattern = sizePatterns[Math.floor(Math.random() * sizePatterns.length)];
+        
+        // キャンバス(64x64)からはみ出さないように配置
+        const maxX = 64 - pattern.w - 4; // 少し余裕を持たせる
+        const maxY = 64 - pattern.h - 4;
+        const x = 4 + Math.floor(Math.random() * (maxX - 4));
+        const y = 4 + Math.floor(Math.random() * (maxY - 4));
+
         this.state = {
+            gem: { x, y, w: pattern.w, h: pattern.h },
             gemHp: 100,
             dust: 0,
             isGameOver: false,
@@ -18,7 +35,7 @@ class Game {
         };
         this.mode = 'hammer';
         
-        this.renderer.initLayers();
+        this.renderer.initLayers(this.state.gem);
         this.input.init();
 
         this.input.onStroke = (pos, isFirst, lastPos) => {
@@ -42,10 +59,11 @@ class Game {
     calculateProgress() {
         if (this.state.isGameOver || this.state.isCleared) return;
 
-        // 宝石の範囲（24,24 から 16x16）のピクセルデータを取得
-        const imgData = this.renderer.dirtCtx.getImageData(24, 24, 16, 16).data;
+        const { x, y, w, h } = this.state.gem;
+        // 宝石の範囲のピクセルデータを取得
+        const imgData = this.renderer.dirtCtx.getImageData(x, y, w, h).data;
         let clearPixels = 0;
-        const totalPixels = 16 * 16;
+        const totalPixels = w * h;
 
         for (let i = 3; i < imgData.length; i += 4) {
             if (imgData[i] === 0) clearPixels++; // アルファ値が0なら消去済み
