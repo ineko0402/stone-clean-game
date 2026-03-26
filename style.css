@@ -27,13 +27,27 @@ body {
 /* HUD Styles */
 .hud {
     display: flex;
-    gap: 20px;
+    gap: 30px;
     margin-bottom: 20px;
     background: var(--panel-bg);
-    padding: 15px 25px;
-    border-radius: 16px;
+    padding: 15px 30px;
+    border-radius: 20px;
     backdrop-filter: blur(10px);
     border: 1px solid var(--border-color);
+}
+
+.coin-display {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    color: var(--primary);
+    font-size: 1.1rem;
+    font-weight: bold;
+    text-shadow: 0 0 10px rgba(255,193,7,0.3);
+}
+
+.coin-icon {
+    font-size: 1.2rem;
 }
 
 .stat-item {
@@ -57,6 +71,12 @@ body {
     background: rgba(0,0,0,0.3);
     border-radius: 4px;
     overflow: hidden;
+}
+
+.stage-num {
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: var(--primary);
 }
 
 .gauge-fill {
@@ -250,6 +270,57 @@ button.active {
     background: rgba(0,0,0,0.2);
     padding: 15px;
     border-radius: 12px;
+}
+
+/* Shop Layout */
+.shop-card {
+    background: #2a2a2a;
+    padding: 30px;
+    border-radius: 20px;
+    max-width: 450px;
+    width: 90%;
+    border: 1px solid var(--border-color);
+}
+
+.shop-items {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    margin: 20px 0;
+}
+
+.shop-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: rgba(255,255,255,0.05);
+    padding: 15px 20px;
+    border-radius: 12px;
+}
+
+.item-info {
+    display: flex;
+    flex-direction: column;
+}
+
+.item-name {
+    font-weight: bold;
+}
+
+.item-level {
+    font-size: 0.8rem;
+    opacity: 0.6;
+}
+
+.upgrade-btn {
+    background: var(--primary);
+    color: #000;
+    font-weight: 800;
+    padding: 10px 20px;
+}
+
+#btnShopClose {
+    width: 100%;
 }
 
 #btnRestart {

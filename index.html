@@ -9,6 +9,10 @@
 <body>
     <div class="hud">
         <div class="stat-item">
+            <span class="label">STAGE</span>
+            <div id="stageNum" class="stage-num">1</div>
+        </div>
+        <div class="stat-item">
             <span class="label">耐久度</span>
             <div class="gauge-container"><div id="hpGauge" class="gauge-fill" style="width: 100%"></div></div>
         </div>
@@ -20,6 +24,13 @@
                     <circle id="progressRing" class="ring-fill" cx="20" cy="20" r="18"></circle>
                 </svg>
                 <span id="percentText">0%</span>
+            </div>
+        </div>
+        <div class="stat-item">
+            <span class="label">所持金</span>
+            <div class="coin-display">
+                <span class="coin-icon">💎</span>
+                <span id="coinText">0</span>
             </div>
         </div>
     </div>
@@ -35,6 +46,7 @@
     <div class="controls">
         <button id="btnHammer" class="active">🔨 ハンマー</button>
         <button id="btnBrush">🖌️ ブラシ</button>
+        <button id="btnShopOpen">🛒 ショップ</button>
     </div>
 
     <div id="resultOverlay" class="overlay hidden">
@@ -47,7 +59,27 @@
                 <div>残りHP: <span id="finalHp">100</span>%</div>
                 <div>清掃率: <span id="finalProgress">100</span>%</div>
             </div>
-            <button id="btnRestart">もう一度挑戦</button>
+            <div class="result-buttons">
+                <button id="btnRestart">次へ</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="shopOverlay" class="overlay hidden">
+        <div class="shop-card">
+            <h2>アップグレード</h2>
+            <div class="shop-items">
+                <div class="shop-item">
+                    <div class="item-info">
+                        <span class="item-name">🖌️ ブラシ幅</span>
+                        <span id="brushLevelText" class="item-level">Lv.1 (2.5px)</span>
+                    </div>
+                    <button id="btnUpgradeBrush" class="upgrade-btn">
+                        <span id="brushUpgradeCost">100</span>💎
+                    </button>
+                </div>
+            </div>
+            <button id="btnShopClose">閉じる</button>
         </div>
     </div>
 

@@ -85,7 +85,7 @@ export class Renderer {
     }
 
     // 削り処理
-    erase(x, y, radius, isLine = false, lastX = null, lastY = null) {
+    erase(x, y, radius, isLine = false, lastX = null, lastY = null, forceAlpha = 0.3) {
         const ctx = this.dirtCtx;
         ctx.save();
         
@@ -95,8 +95,8 @@ export class Renderer {
         
         if (isLine && lastX !== null) {
             // ブラシ（線）の場合は、少しずつ透明にするためにアルファ値を下げる
-            // PowerWash風の「徐々に消える」感
-            ctx.globalAlpha = 0.3; 
+            // 汚れの「硬さ」をアルファ値として受け取る
+            ctx.globalAlpha = forceAlpha; 
             ctx.lineWidth = radius * 2;
             ctx.beginPath();
             ctx.moveTo(lastX, lastY);
