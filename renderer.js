@@ -89,13 +89,12 @@ export class Renderer {
         const ctx = this.dirtCtx;
         ctx.save();
         
-        ctx.globalCompositeOperation = 'destination-out';
         ctx.lineCap = 'round';
         ctx.lineJoin = 'round';
         
         if (isLine && lastX !== null) {
-            // ブラシ（線）の場合は、少しずつ透明にするためにアルファ値を下げる
-            // 汚れの「硬さ」をアルファ値として受け取る
+            // ブラシ（線）：宝石の上も削れる
+            ctx.globalCompositeOperation = 'destination-out';
             ctx.globalAlpha = forceAlpha; 
             ctx.lineWidth = radius * 2;
             ctx.beginPath();
@@ -103,11 +102,30 @@ export class Renderer {
             ctx.lineTo(x, y);
             ctx.stroke();
         } else {
-            // ハンマー（円）の場合は一気に消す
+            // ハンマー（円）：「宝石以外の泥」をそぎ落とす
+            // 1. オフ画面キャンバスで「円」を描画し、そこから「宝石の形」をくり抜く
+            if (!this.tempCanvas) {
+                this.tempCanvas = document.createElement('canvas');
+                this.tempCanvas.width = 64; this.tempCanvas.height = 64;
+                this.tempCtx = this.tempCanvas.getContext('2d');
+            }
+            this.tempCtx.clearRect(0, 0, 64, 64);
+            
+            // 円を描く
+            this.tempCtx.globalCompositeOperation = 'source-over';
+            this.tempCtx.fillStyle = 'black';
+            this.tempCtx.beginPath();
+            this.tempCtx.arc(x, y, radius, 0, Math.PI * 2);
+            this.tempCtx.fill();
+            
+            // 宝石の形で「くり抜く」（宝石がある場所を透明にする）
+            this.tempCtx.globalCompositeOperation = 'destination-out';
+            this.tempCtx.drawImage(this.collisionCanvas, 0, 0);
+            
+            // 2. 作成したマスクを使って泥を消す
+            ctx.globalCompositeOperation = 'destination-out';
             ctx.globalAlpha = 1.0;
-            ctx.beginPath();
-            ctx.arc(x, y, radius, 0, Math.PI * 2);
-            ctx.fill();
+            ctx.drawImage(this.tempCanvas, 0, 0);
         }
         
         ctx.restore();

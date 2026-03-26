@@ -109,14 +109,17 @@ class Game {
 
         const { x, y, w, h } = this.state.gem;
         const imgData = this.renderer.dirtCtx.getImageData(x, y, w, h).data;
-        let clearPixels = 0;
+        let totalClearWeight = 0;
         const totalPixels = w * h;
 
         for (let i = 3; i < imgData.length; i += 4) {
-            if (imgData[i] === 0) clearPixels++;
+            // アルファ値（不透明度）が下がるほど「清掃済み」としてカウントする
+            // 255 (不透明) -> 重み 0
+            // 0 (透明) -> 重み 1
+            totalClearWeight += (255 - imgData[i]) / 255;
         }
 
-        const newPercent = (clearPixels / totalPixels) * 100;
+        const newPercent = (totalClearWeight / totalPixels) * 100;
         this.state.cleanPercent = newPercent;
 
         // マイルストーン検知 (25, 50, 75%)
