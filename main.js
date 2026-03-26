@@ -9,7 +9,23 @@ class Game {
     }
 
     init() {
-        // 宝石のサイズパターン（5種類）を設定
+        // 宝石の種類定義（名前, 色, レア度, 出現率）
+        const gemTypes = [
+            { id: 'emerald', name: 'エメラルド', color: '#00e676', rarity: 1, weight: 50 },
+            { id: 'ruby', name: 'ルビー', color: '#ff1744', rarity: 2, weight: 30 },
+            { id: 'sapphire', name: 'サファイア', color: '#2979ff', rarity: 3, weight: 15 },
+            { id: 'diamond', name: 'ダイヤモンド', color: '#f5f5f5', rarity: 5, weight: 5 }
+        ];
+
+        // 重み付きランダム選択
+        const totalWeight = gemTypes.reduce((sum, g) => sum + g.weight, 0);
+        let random = Math.random() * totalWeight;
+        const gemType = gemTypes.find(g => {
+            random -= g.weight;
+            return random <= 0;
+        }) || gemTypes[0];
+
+        // 宝石のサイズパターン
         const sizePatterns = [
             { w: 12, h: 12 },
             { w: 16, h: 16 },
@@ -19,19 +35,19 @@ class Game {
         ];
         const pattern = sizePatterns[Math.floor(Math.random() * sizePatterns.length)];
         
-        // キャンバス(64x64)からはみ出さないように配置
-        const maxX = 64 - pattern.w - 4; // 少し余裕を持たせる
+        const maxX = 64 - pattern.w - 4;
         const maxY = 64 - pattern.h - 4;
         const x = 4 + Math.floor(Math.random() * (maxX - 4));
         const y = 4 + Math.floor(Math.random() * (maxY - 4));
 
         this.state = {
-            gem: { x, y, w: pattern.w, h: pattern.h },
+            gem: { ...pattern, x, y, type: gemType },
             gemHp: 100,
             dust: 0,
             isGameOver: false,
             isCleared: false,
-            cleanPercent: 0
+            cleanPercent: 0,
+            lastMilestone: 0
         };
         this.mode = 'hammer';
         
@@ -49,8 +65,8 @@ class Game {
         };
 
         this.setupUI();
-        // 判定用タイマー（1秒間に2回チェック）
-        this.checkTimer = setInterval(() => this.calculateProgress(), 500);
+        // 判定用タイマー（1秒間に4回チェック - より滑らかに）
+        this.checkTimer = setInterval(() => this.calculateProgress(), 250);
         
         requestAnimationFrame((ts) => this.gameLoop(ts));
     }
@@ -60,21 +76,29 @@ class Game {
         if (this.state.isGameOver || this.state.isCleared) return;
 
         const { x, y, w, h } = this.state.gem;
-        // 宝石の範囲のピクセルデータを取得
         const imgData = this.renderer.dirtCtx.getImageData(x, y, w, h).data;
         let clearPixels = 0;
         const totalPixels = w * h;
 
         for (let i = 3; i < imgData.length; i += 4) {
-            if (imgData[i] === 0) clearPixels++; // アルファ値が0なら消去済み
+            if (imgData[i] === 0) clearPixels++;
         }
 
-        this.state.cleanPercent = (clearPixels / totalPixels) * 100;
+        const newPercent = (clearPixels / totalPixels) * 100;
+        this.state.cleanPercent = newPercent;
+
+        // マイルストーン検知 (25, 50, 75%)
+        const milestone = Math.floor(newPercent / 25) * 25;
+        if (milestone > this.state.lastMilestone && milestone < 100) {
+            this.state.lastMilestone = milestone;
+            this.renderer.triggerMilestoneFlash();
+        }
 
         // 95%以上綺麗になったらクリア
         if (this.state.cleanPercent >= 95) {
+            this.state.cleanPercent = 100; // 表示上は100%にする
             this.state.isCleared = true;
-            this.showResult("発掘成功！宝石を見つけました！");
+            this.showResult("発掘成功！", "素晴らしい宝石を見つけました！");
         }
     }
 
@@ -109,38 +133,92 @@ class Game {
         if (this.state.gemHp <= 0) {
             this.state.gemHp = 0;
             this.state.isGameOver = true;
-            this.showResult("宝石が砕けてしまいました...");
+            this.showResult("砕損...", "宝石が砕けてしまいました。");
         }
     }
 
-    showResult(message) {
+    showResult(title, message) {
         clearInterval(this.checkTimer);
-        setTimeout(() => {
-            alert(`${message}\n残りHP: ${Math.floor(this.state.gemHp)}%`);
-            if(confirm("もう一度挑戦しますか？")) {
-                location.reload(); // リスタート（簡易実装）
-            }
-        }, 100);
+        this.updateStatsUI();
+        
+        let rank = 'D';
+        if (this.state.isCleared) {
+            const hp = this.state.gemHp;
+            if (hp >= 90) rank = 'S';
+            else if (hp >= 70) rank = 'A';
+            else if (hp >= 40) rank = 'B';
+            else rank = 'C';
+        }
+
+        const overlay = document.getElementById('resultOverlay');
+        const titleEl = document.getElementById('resultTitle');
+        const textEl = document.getElementById('resultText');
+        const hpEl = document.getElementById('finalHp');
+        const progEl = document.getElementById('finalProgress');
+        const rankEl = document.getElementById('rankLabel');
+        const gemNameEl = document.getElementById('gemName');
+
+        titleEl.innerText = title;
+        textEl.innerText = message;
+        hpEl.innerText = Math.floor(this.state.gemHp);
+        progEl.innerText = Math.floor(this.state.cleanPercent);
+        
+        if (rankEl) {
+            rankEl.innerText = rank;
+            rankEl.className = `rank-badge rank-${rank.toLowerCase()}`;
+        }
+        if (gemNameEl) {
+            gemNameEl.innerText = this.state.gem.type.name;
+            gemNameEl.style.color = this.state.gem.type.color;
+        }
+
+        overlay.classList.remove('hidden');
+        if (this.state.isCleared) {
+            this.renderer.createVictorySparkles();
+        }
     }
 
     gameLoop() {
         if (!this.state.isGameOver && !this.state.isCleared) {
             this.renderer.updateAndDrawParticles();
-            this.updateStatsUI();
         }
+        this.updateStatsUI();
         requestAnimationFrame(() => this.gameLoop());
     }
 
     updateStatsUI() {
-        const statusEl = document.getElementById('status');
-        if (statusEl) {
-            statusEl.innerText = `HP: ${Math.floor(this.state.gemHp)}% | 清掃率: ${Math.floor(this.state.cleanPercent)}% | 粉塵: ${Math.floor(this.state.dust)}`;
+        // HP ゲージ
+        const hpGauge = document.getElementById('hpGauge');
+        if (hpGauge) {
+            const hp = this.state.gemHp;
+            hpGauge.style.width = `${hp}%`;
+            
+            // 色の変化 (緑 -> オレンジ -> 赤)
+            if (hp > 50) {
+                hpGauge.style.background = 'var(--hp-color)';
+            } else if (hp > 25) {
+                hpGauge.style.background = 'var(--hp-warn)';
+            } else {
+                hpGauge.style.background = 'var(--hp-crit)';
+            }
+        }
+
+        // 清掃率 (リングとテキスト)
+        const percent = Math.floor(this.state.cleanPercent);
+        const ring = document.getElementById('progressRing');
+        const text = document.getElementById('percentText');
+        if (ring && text) {
+            text.innerText = `${percent}%`;
+            // SVG dashoffset: 113.1 * (1 - percent/100)
+            const offset = 113.1 * (1 - percent / 100);
+            ring.style.strokeDashoffset = offset;
         }
     }
 
     setupUI() {
         document.getElementById('btnHammer').onclick = () => { this.mode = 'hammer'; this.updateButtonUI(); };
         document.getElementById('btnBrush').onclick = () => { this.mode = 'brush'; this.updateButtonUI(); };
+        document.getElementById('btnRestart').onclick = () => { location.reload(); };
         this.updateButtonUI();
     }
 

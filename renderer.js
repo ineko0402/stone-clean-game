@@ -22,15 +22,22 @@ export class Renderer {
 
     initLayers(gem) {
         // 1. 宝石の描画（ベースレイヤー）
-        this.baseCtx.fillStyle = '#00e5ff'; // 宝石の色
+        this.baseCtx.fillStyle = gem.type.color;
         this.baseCtx.fillRect(gem.x, gem.y, gem.w, gem.h);
         
         // 輝き（左上の方に小さく配置）
         this.baseCtx.fillStyle = '#ffffff';
         const shineSize = Math.max(2, Math.floor(gem.w / 4));
         this.baseCtx.fillRect(gem.x + 2, gem.y + 2, shineSize, shineSize);
+
+        // レア度が3以上ならもう一つ輝きを追加
+        if (gem.type.rarity >= 3) {
+            this.baseCtx.fillRect(gem.x + gem.w - 4, gem.y + gem.h - 4, 3, 3);
+        }
         
-        // 2. 当たり判定マップの作成（宝石と同じ位置を赤く塗る）
+        this.currentGem = gem; // 保存しておく
+        
+        // 2. 当たり判定マップの作成
         this.collisionCtx.clearRect(0, 0, 64, 64);
         this.collisionCtx.fillStyle = '#ff0000';
         this.collisionCtx.fillRect(gem.x, gem.y, gem.w, gem.h);
@@ -40,12 +47,10 @@ export class Renderer {
     }
 
     drawDirt() {
-        // 描画モードを通常に戻して泥を塗る
         this.dirtCtx.globalCompositeOperation = 'source-over';
         this.dirtCtx.fillStyle = '#5d4037';
         this.dirtCtx.fillRect(0, 0, 64, 64);
         
-        // ドット絵らしい質感（ディザリング風）
         for (let i = 0; i < 200; i++) {
             this.dirtCtx.fillStyle = Math.random() > 0.5 ? '#4e342e' : '#6d4c41';
             this.dirtCtx.fillRect(
@@ -53,6 +58,22 @@ export class Renderer {
                 Math.floor(Math.random() * 64), 
                 2, 2
             );
+        }
+    }
+
+    // 勝利時のキラキラ演出
+    createVictorySparkles() {
+        if (!this.currentGem) return;
+        const { x, y, w, h } = this.currentGem;
+        
+        for (let i = 0; i < 50; i++) {
+            const sx = x + Math.random() * w;
+            const sy = y + Math.random() * h;
+            const p = new Particle(sx, sy, '#fff');
+            p.vx = (Math.random() - 0.5) * 1.5;
+            p.vy = (Math.random() - 0.5) * 1.5 - 1.0;
+            p.life = 1.0 + Math.random();
+            this.particles.push(p);
         }
     }
 
@@ -66,22 +87,39 @@ export class Renderer {
     // 削り処理
     erase(x, y, radius, isLine = false, lastX = null, lastY = null) {
         const ctx = this.dirtCtx;
-        // 指定範囲を透明にするモード
+        ctx.save();
+        
         ctx.globalCompositeOperation = 'destination-out';
         ctx.lineCap = 'round';
         ctx.lineJoin = 'round';
         
         if (isLine && lastX !== null) {
+            // ブラシ（線）の場合は、少しずつ透明にするためにアルファ値を下げる
+            // PowerWash風の「徐々に消える」感
+            ctx.globalAlpha = 0.3; 
             ctx.lineWidth = radius * 2;
             ctx.beginPath();
             ctx.moveTo(lastX, lastY);
             ctx.lineTo(x, y);
             ctx.stroke();
         } else {
+            // ハンマー（円）の場合は一気に消す
+            ctx.globalAlpha = 1.0;
             ctx.beginPath();
             ctx.arc(x, y, radius, 0, Math.PI * 2);
             ctx.fill();
         }
+        
+        ctx.restore();
+    }
+
+    // マイルストーン達成時のエフェクト
+    triggerMilestoneFlash() {
+        const el = document.getElementById('milestoneEffect');
+        if (!el) return;
+        el.classList.remove('milestone-flash');
+        void el.offsetWidth; // 読み込み強制でアニメーションをリセット
+        el.classList.add('milestone-flash');
     }
 
     // ハンマー打撃時のパーティクル生成

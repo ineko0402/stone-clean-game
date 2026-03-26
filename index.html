@@ -7,15 +7,48 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <div id="status">モード: ハンマー</div>
-    <div class="canvas-container">
-        <canvas id="baseCanvas" width="64" height="64"></canvas>
-        <canvas id="dirtCanvas" width="64" height="64"></canvas>
+    <div class="hud">
+        <div class="stat-item">
+            <span class="label">耐久度</span>
+            <div class="gauge-container"><div id="hpGauge" class="gauge-fill" style="width: 100%"></div></div>
+        </div>
+        <div class="stat-item">
+            <span class="label">清掃率</span>
+            <div class="progress-ring-container">
+                <svg width="40" height="40" viewBox="0 0 40 40">
+                    <circle class="ring-bg" cx="20" cy="20" r="18"></circle>
+                    <circle id="progressRing" class="ring-fill" cx="20" cy="20" r="18"></circle>
+                </svg>
+                <span id="percentText">0%</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="canvas-wrapper">
+        <div class="canvas-container">
+            <canvas id="baseCanvas" width="64" height="64"></canvas>
+            <canvas id="dirtCanvas" width="64" height="64"></canvas>
+        </div>
+        <div id="milestoneEffect" class="milestone-effect"></div>
     </div>
 
     <div class="controls">
-        <button id="btnHammer" class="active">ハンマー</button>
-        <button id="btnBrush">ブラシ</button>
+        <button id="btnHammer" class="active">🔨 ハンマー</button>
+        <button id="btnBrush">🖌️ ブラシ</button>
+    </div>
+
+    <div id="resultOverlay" class="overlay hidden">
+        <div class="result-card">
+            <div id="rankLabel" class="rank-badge">S</div>
+            <h2 id="resultTitle">発掘成功！</h2>
+            <div id="gemName" class="gem-name">ダイヤモンド</div>
+            <div id="resultText">素晴らしい宝石を見つけました！</div>
+            <div class="result-stats">
+                <div>残りHP: <span id="finalHp">100</span>%</div>
+                <div>清掃率: <span id="finalProgress">100</span>%</div>
+            </div>
+            <button id="btnRestart">もう一度挑戦</button>
+        </div>
     </div>
 
     <script type="module" src="main.js"></script>
