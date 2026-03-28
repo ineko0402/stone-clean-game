@@ -16,8 +16,8 @@ html, body {
     width: 100%;
     height: 100%;
     overflow: hidden;
-    /* タップやズーム、スクロールなどブラウザの全タッチ挙動を無効化 */
-    touch-action: none; 
+    /* ダブルタップズームを無効化し、ピンチズームなどは許可する設定 */
+    touch-action: manipulation; 
 }
 
 body {
